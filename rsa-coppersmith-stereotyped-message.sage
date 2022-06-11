@@ -5,12 +5,13 @@
 # This file may be distributed on conditions of the
 # GNU General Public License v3.0
 
-# it implements the following function: stereotyped_message_attack
+# it implements the following function: message_recover
 # to decrypt a "secret" from the message (m) consisting of "prefix | secret | suffix"
 # if we only know "prefix" and "suffix" but not the "secret"
-# inputs: prefix, length of the secret in bytes, suffix, enc, n, e
+# inputs: prefix, sec_len (length of the secret in bytes), suffix, enc, n, e
 # where "n" and "e" are parts of RSA public key, and "enc" is the ciphertext
-# output: secret
+# output: message (m) consisting of "prefix | secret | suffix"
+# (prefix and suffix are of bytearray types, whereas enc, n and e are integers)
 
 # to install rerequisites, run
 # sage -pip install pycryptodome pycrypto
@@ -22,13 +23,12 @@ from Crypto import Random
 import secrets
 
 
-def stereotyped_message_attack(prefix, secret_len_bytes, suffix, enc, n, e):
+def message_recover(prefix, sec_len, suffix, enc, n, e):
     ZmodN = Zmod(n)
     P.<x> = PolynomialRing(ZmodN)
-    prefix_len_bytes = len(prefix)
-    suffix_len_bytes = len(suffix)
-    known = ZmodN((bytes_to_long(prefix) * (2**((secret_len_bytes+suffix_len_bytes)*8))) + bytes_to_long(suffix))
-    xmultiplier = ZmodN(Integer(2**(suffix_len_bytes*8)))
+    suffix_len = len(suffix)
+    known = ZmodN((bytes_to_long(prefix) * (2**((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
+    xmultiplier = ZmodN(Integer(2**(suffix_len*8)))
     enc = ZmodN(enc)
     f = (known+xmultiplier*x)^e - enc
     f = f.monic()
@@ -37,8 +37,8 @@ def stereotyped_message_attack(prefix, secret_len_bytes, suffix, enc, n, e):
     if rc == 0:
         return None
     elif rc == 1:
-        decrypted = known + xmultiplier * (roots[0])
-        return decrypted
+        message = known + xmultiplier * (roots[0])
+        return long_to_bytes(message)
     else:
         print("Don't know how to handle situation when multiple roots are returned:", rc)
         sys.exit(1)
@@ -76,24 +76,23 @@ def test():
 
     # Attack
     while True:
-        print("Trying to recover the secret", secret_len, "byte(s) long...")
-        root = stereotyped_message_attack(
+        print("Trying to recover the message", secret_len, "byte(s) long...")
+        message = message_recover(
             prefix, secret_len, suffix, enc, n, e)
-        if root is not None:
-            dec = long_to_bytes(root)
+        if message is not None:
             with open("decrypted-message.bin", "wb") as file:
-                file.write(dec)
+                file.write(message)
                 file.close()
             break
         else:
             if secret_len > max_secret_len:
-                print('Could not recover the secret, sorry!')
+                print('Could not recover the message, sorry!')
                 sys.exit(1)
         secret_len += 1
 
     # Result
-    print('Decrypted message:', dec)
-    print('plaintext=dec', plaintext == dec)
+    print('Decrypted message:', message)
+    print('plaintext=message', plaintext == message)
 
 if __name__ == '__main__':
     test()
