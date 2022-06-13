@@ -16,10 +16,8 @@
 # to install rerequisites, run
 # sage -pip install pycryptodome pycrypto
 
-from Crypto.Util.number import getPrime, inverse, long_to_bytes, bytes_to_long
+from Crypto.Util.number import long_to_bytes, bytes_to_long
 from Crypto.PublicKey import RSA
-from Crypto.Random import get_random_bytes
-from Crypto import Random
 import secrets
 
 
@@ -27,8 +25,8 @@ def message_recover(prefix, sec_len, suffix, enc, n, e):
     ZmodN = Zmod(n)
     P.<x> = PolynomialRing(ZmodN)
     suffix_len = len(suffix)
-    known = ZmodN((bytes_to_long(prefix) * (2**((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
-    xmultiplier = ZmodN(Integer(2**(suffix_len*8)))
+    known = ZmodN((bytes_to_long(prefix) * (2^((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
+    xmultiplier = ZmodN(Integer(2^(suffix_len*8)))
     enc = ZmodN(enc)
     f = (known+xmultiplier*x)^e - enc
     f = f.monic()
@@ -38,21 +36,27 @@ def message_recover(prefix, sec_len, suffix, enc, n, e):
         return None
     elif rc == 1:
         message = known + xmultiplier * (roots[0])
-        return long_to_bytes(message)
+        return long_to_bytes(int(message))
     else:
         print("Don't know how to handle situation when multiple roots are returned:", rc)
         sys.exit(1)
 
-def encrypt(m, pubkey):
-    n, e = pubkey.n, pubkey.e
+def encrypt(m, n, e):
     m = bytes_to_long(m)
     return pow(m, e, n)
 
 def test():
     print('Generating primes..')
-    public_key = RSA.generate(4096, secrets.token_bytes, e=5)
-    e = public_key.e
-    n = public_key.n
+#    public_key = RSA.generate(4096, secrets.token_bytes, e=5)
+#    e = public_key.e
+#    n = public_key.n
+    bits=4096
+    p = random_prime((2^bits)-1,False,2^(bits-1))
+    q = random_prime((2^bits)-1,False,2^(bits-1))
+    n = p*q
+    e = 5
+    print('Calculating..')
+
     suffix = bytearray([0x0a])+"The quick brown fox jumped over ???".encode()
     prefix = "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do once or twice she had peeped into sister was reading, but it had no pictures or conversations in it, and what is the use of a book thought Alice without".encode() + \
         bytearray([0xe8, 0x01])
@@ -60,7 +64,7 @@ def test():
     secret_len = 51
     test_secret = ((bytearray([0xff]))*int(secret_len))  # You can also fill this with pseudorandom bytes rather than fixed bytes
     plaintext = prefix+test_secret+suffix
-    enc = encrypt(plaintext, public_key)
+    enc = encrypt(plaintext, n, e)
 
     e = Integer(e)
     n = Integer(n)
