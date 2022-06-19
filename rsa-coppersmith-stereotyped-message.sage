@@ -17,7 +17,6 @@
 # sage -pip install pycryptodome pycrypto
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.PublicKey import RSA
 import secrets
 
 
@@ -106,9 +105,10 @@ def demo(n=None,bits=None,e=None,c=None,prefix=None,suffix=None,test_secret=None
         message = message_recover(
             prefix, secret_len, suffix, c, n, e)
         if message is not None:
-            with open("decrypted-message.bin", "wb") as file:
-                file.write(message)
-                file.close()
+# Uncomment the following if you need to write decrypted message on disk
+#            with open("decrypted-message.bin", "wb") as file:
+#                file.write(message)
+#                file.close()
             break
         else:
             if secret_len > max_secret_len:
