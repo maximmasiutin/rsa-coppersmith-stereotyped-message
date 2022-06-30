@@ -17,20 +17,21 @@
 # sage -pip install pycryptodome pycrypto
 
 from Crypto.Util.number import long_to_bytes, bytes_to_long
-from Crypto.PublicKey import RSA
-import secrets
 
 
 def message_recover(prefix, sec_len, suffix, c, n, e):
     ZmodN = Zmod(n)
     P.<x> = PolynomialRing(ZmodN)
     suffix_len = len(suffix)
-    a = ZmodN((bytes_to_long(prefix) * (2^((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
-    b = ZmodN(Integer(2^(suffix_len*8)))
+    a = ZmodN(
+        (bytes_to_long(prefix) * (2 ^ ((sec_len + suffix_len) * 8)))
+        + bytes_to_long(suffix)
+    )
+    b = ZmodN(Integer(2 ^ (suffix_len * 8)))
     c = ZmodN(c)
-    f = (a+b*x)^e - c
+    f = (a + b * x) ^ e - c
     f = f.monic()
-    roots = f.small_roots(epsilon=1/20)
+    roots = f.small_roots(epsilon=1 / 20)
     rc = len(roots)
     if rc == 0:
         return None
@@ -38,98 +39,129 @@ def message_recover(prefix, sec_len, suffix, c, n, e):
         message = a + b * (roots[0])
         return long_to_bytes(int(message))
     else:
-        print("Don't know how to handle situation when multiple roots are returned:", rc)
+        print(
+            "Don't know how to handle situation when multiple roots are returned:", rc
+        )
         sys.exit(1)
+
 
 def encrypt(m, n, e):
     m = bytes_to_long(m)
     return pow(m, e, n)
 
-def demo(n=None,bits=None,e=None,c=None,prefix=None,suffix=None,test_secret=None,secret_len=None):
-    if 'n' not in locals() or n is None:
-        print('Generating public modulus..')
-        if 'bits' not in locals() or bits is None:
-            bits=4096
-        pn = 2^(bits//2)-1
-        pl = 2^(bits//2-1)
-        p = random_prime(pn,False,pl)
-        q = random_prime(pn,False,pl)
-        n = p*q
-        print("n=",n)
-    else:
-        if not ('bits' not in locals() or bits is None):
-            print('Error: if you defined "n"',n,'you should not specify "bits"!',bits)
-            sys.exit(1) 
 
-    if 'e' not in locals() or e is None:
+def demo(
+    n=None,
+    bits=None,
+    e=None,
+    c=None,
+    prefix=None,
+    suffix=None,
+    test_secret=None,
+    secret_len=None,
+):
+    if "n" not in locals() or n is None:
+        print("Generating public modulus..")
+        if "bits" not in locals() or bits is None:
+            bits = 4096
+        pn = 2 ^ (bits // 2) - 1
+        pl = 2 ^ (bits // 2 - 1)
+        p = random_prime(pn, False, pl)
+        q = random_prime(pn, False, pl)
+        n = p * q
+        print("n=", n)
+    else:
+        if not ("bits" not in locals() or bits is None):
+            print(
+                'Error: if you defined "n"', n, 'you should not specify "bits"!', bits
+            )
+            sys.exit(1)
+
+    if "e" not in locals() or e is None:
         e = 5
-        print("e=",e)
+        print("e=", e)
 
-    if 'suffix' not in locals() or suffix is None:
-        suffix = bytearray([0x0a])+"The quick brown fox jumped over ??".encode()+bytearray([0x0a])
+    if "suffix" not in locals() or suffix is None:
+        suffix = (
+            bytearray([0x0A])
+            + "The quick brown fox jumped over ??".encode()
+            + bytearray([0x0A])
+        )
 
-    if 'prefix' not in locals() or prefix is None:
-        prefix = "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do once or twice she had peeped into sister was reading, but it had no pictures or conversations in it, and what is the use of a book thought Alice without".encode() + \
-            bytearray([0xe8, 0x01])
+    if "prefix" not in locals() or prefix is None:
+        prefix = "Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do once or twice she had peeped into sister was reading, but it had no pictures or conversations in it, and what is the use of a book thought Alice without".encode() + bytearray(
+            [0xE8, 0x01]
+        )
 
-    if 'c' not in locals() or c is None:
-        if 'test_secret' not in locals() or test_secret is None:
-            if 'secret_len' not in locals() or secret_len is None:
+    if "c" not in locals() or c is None:
+        if "test_secret" not in locals() or test_secret is None:
+            if "secret_len" not in locals() or secret_len is None:
                 secret_len = 51
-            test_secret = ((bytearray([0xff]))*int(secret_len))  # You can also fill this with pseudorandom bytes rather than fixed bytes
+            test_secret = (bytearray([0xFF])) * int(
+                secret_len
+            )  # You can also fill this with pseudorandom bytes rather than fixed bytes
         else:
-            secret_len=len(test_secret)
-    
-        plaintext = prefix+test_secret+suffix
+            secret_len = len(test_secret)
+
+        plaintext = prefix + test_secret + suffix
         c = encrypt(plaintext, n, e)
-        print("c=", c);
+        print("c=", c)
     else:
-        if 'secret_len' not in locals() or secret_len is None:
+        if "secret_len" not in locals() or secret_len is None:
             secret_len = 51
-        
 
     e = Integer(e)
     n = Integer(n)
     c = Integer(c)
-    max_secret_len = max(n.nbits(), c.nbits())//8 - len(prefix) - len(suffix)
+    max_secret_len = max(n.nbits(), c.nbits()) // 8 - len(prefix) - len(suffix)
     if secret_len > max_secret_len:
-        print("Error: The secret length of", secret_len, "byte(s) is larger then the maximum of",
-              max_secret_len, "bytes(s) for the given prefix, suffix, encrypted message and the public exponent!")
+        print(
+            "Error: The secret length of",
+            secret_len,
+            "byte(s) is larger then the maximum of",
+            max_secret_len,
+            "bytes(s) for the given prefix, suffix, encrypted message and the public exponent!",
+        )
         sys.exit(1)
 
-    print("Will recover the secret with the length of up to a maximum",
-          max_secret_len, "byte(s).")
+    print(
+        "Will recover the secret with the length of up to a maximum",
+        max_secret_len,
+        "byte(s).",
+    )
 
     # Attack
     while True:
         print("Trying to recover the message", secret_len, "byte(s) long...")
-        message = message_recover(
-            prefix, secret_len, suffix, c, n, e)
+        message = message_recover(prefix, secret_len, suffix, c, n, e)
         if message is not None:
-            with open("decrypted-message.bin", "wb") as file:
-                file.write(message)
-                file.close()
+            # Uncomment the following if you need to write decrypted message on disk
+            #            with open("decrypted-message.bin", "wb") as file:
+            #                file.write(message)
+            #                file.close()
             break
         else:
             if secret_len > max_secret_len:
-                print('Could not recover the message, sorry!')
+                print("Could not recover the message, sorry!")
                 sys.exit(1)
         secret_len += 1
 
     # Result
-    print('Decrypted message:', message)
-    if (('plaintext' in locals()) and (plaintext is not None) and (plaintext != message)):
-        print('Original message:', plaintext)
+    print("Decrypted message:", message)
+    if ("plaintext" in locals()) and (plaintext is not None) and (plaintext != message):
+        print("Original message:", plaintext)
+
 
 def test():
     demo(
         prefix='Alice was beginning to get very tired of sitting by her sister on the bank, and of having nothing to do: once or twice she had peeped into the book her sister was reading, but it had no pictures or conversations in it, "and what is the use of a book," thought Alice "without pictures or conversations?"'.encode(),
-        suffix='So she was considering in her own mind'.encode(),
+        suffix="So she was considering in her own mind".encode(),
         secret_len=40,
         n=3467426486679248188653108800559303386287554758768603423122467027096467860515830623551961505313664141296904641850703744135287017025760835972810054078803098293940120479477368194541115344412791785116997727196022631723141878728286774255685156516571932296886998466272454887539602731047343742495050002572671441193084923555233670458750289683414636469156422984229794884454599364548820051674964597550868314576555780472229387306932641830261590611187094400404466606122448216261863751961471245387850997613367062927316452286763923670194071565360870710022155335514833711527379119373273785777917295893791807847357955717062357902040066841760808578372256972697775905378757195955033469778059624315778200977783278536951525075875817778053895771050091363086812118962820826913609223645211122676803341948235209417823538105756118234896445613991053915093869273988913032068314497103454497121342138262082883895648291665445774240369766951426339216224501,
         c=1645498320791922355370582405240330238181898362355669999154282619303555388816710519302334630489599513620176476760170863786912237609212103154819355284178634755973253089665511013478752584901123440508521746236195297468216467660585016981530193945296058601498154741758745039290985367949310875873967601907643217262326981812819079068959387615487967414671214032971663472966158431796224181094930097892861707149276839212476062372980863751941436630964414322278441114208206128295171964575548674651941040698297767917766445273137044493894256068224643110590026278922448779703119830564462762258074089349992877098014295551671411309753998809139826159064187372041128390000943466532405817925849618091490918009815597145386320673834140074030363821605804064759459481999821411660750101044308020947066515938666198128830019734714713943695606835860234200477950674896538820361444367838869357004264378083620039955731589936285249148617818041606353949565615,
-        e=3
-        )
+        e=3,
+    )
+
 
 # Uncomment the demos below
 
@@ -143,7 +175,7 @@ def test():
 #    demo(
 #         test_secret = 'to find where Doctor Fred is holding the tentacles!'.encode()
 #         )
-   
+
 #    demo(
 #         bits=2560,
 #         secret_len=22,
@@ -151,6 +183,5 @@ def test():
 #         )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     test()
-
