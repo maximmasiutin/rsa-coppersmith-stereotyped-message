@@ -25,17 +25,17 @@ def message_recover(prefix, sec_len, suffix, c, n, e):
     ZmodN = Zmod(n)
     P.<x> = PolynomialRing(ZmodN)
     suffix_len = len(suffix)
-    known = ZmodN((bytes_to_long(prefix) * (2^((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
-    xmultiplier = ZmodN(Integer(2^(suffix_len*8)))
+    a = ZmodN((bytes_to_long(prefix) * (2^((sec_len+suffix_len)*8))) + bytes_to_long(suffix))
+    b = ZmodN(Integer(2^(suffix_len*8)))
     c = ZmodN(c)
-    f = (known+xmultiplier*x)^e - c
+    f = (a+b*x)^e - c
     f = f.monic()
     roots = f.small_roots(epsilon=1/20)
     rc = len(roots)
     if rc == 0:
         return None
     elif rc == 1:
-        message = known + xmultiplier * (roots[0])
+        message = a + b * (roots[0])
         return long_to_bytes(int(message))
     else:
         print("Don't know how to handle situation when multiple roots are returned:", rc)

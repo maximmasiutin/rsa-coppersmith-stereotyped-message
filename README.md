@@ -10,13 +10,13 @@ It implements the following function: `message_recover`
 to decrypt a `secret` from the message `m` consisting of `prefix | secret | suffix`
 if we only know `prefix` and `suffix` but not the `secret`.
 
-Inputs: `prefix`, `sec_len` (length of the secret in bytes), `suffix`, `enc`, `n`, `e`
+Inputs: `prefix`, `sec_len` (length of the secret in bytes), `suffix`, `c`, `n`, `e`
 
-Where `n` and `e` are parts of RSA public key, and `enc` is the ciphertext
+Where `n` and `e` are parts of RSA public key, and `c` is the ciphertext
 
 Output: `m` (message)
 
-Types: `prefix`, `suffix` and `m` are of bytearray type, whereas `sec_len`, `enc`, `n` and `e` are integers.
+Types: `prefix`, `suffix` and `m` are of bytearray type, whereas `sec_len`, `c`, `n` and `e` are integers.
 
 
 To install the prerequisites, run
